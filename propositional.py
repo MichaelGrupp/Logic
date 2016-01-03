@@ -5,7 +5,7 @@ Created on Sun Jan 03 15:03:22 2016
 @author: Michael
 """
 
-import re #regex
+import re
 
 """
 logical operators in Python:
@@ -31,8 +31,8 @@ class PropLogic:
     
     
 class Parser:
-    badPatterns = ["/\\", "\\/"] #critical patterns to be replaced in clean step
-    goodPatterns = ['and', 'or'] #patterns used as replacement in clean step
+    badPatterns = [" ", "/\\", "\\/"] #critical patterns to be replaced in clean step
+    goodPatterns = ['', 'and', 'or'] #patterns used as replacement in clean step
     
     #operators in propositional logic, descending order
     operators = ['<=>', '==>', 'or', 'and', '~']
@@ -53,7 +53,7 @@ class Parser:
         #in a list of unordered tokens (operator, keys, symbols)
         #e.g. 'a /\ b' --> ['a', 'and', 'b']
         string = self.clean(string)        
-        return re.split(',', string)
+        return list(filter(None, re.split("(and|or|~|[()])", string)))
     
     def parse(tokenList):
         #convert the token list into a formula        
@@ -61,9 +61,9 @@ class Parser:
     
     
 #def main():
-    parser = Parser();
-    string = '(a /\ ~b)'
-    symbolList = parser.lex(string)
-    print string
-    print symbolList
-    pass
+parser = Parser();
+string = 'a /\ (~b)'
+symbolList = parser.lex(string)
+print string
+print symbolList
+pass
