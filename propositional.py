@@ -27,8 +27,8 @@ class Expr:
     #an expression has its arguments as children
     #children can be Const, Var or Expr    
     children = []
-    def __init__(self):
-        pass
+    def __init__(self, child1=None, child2=None):
+        self.children = [child1, child2]
     def addChild(self, child):
         self.children.append(child)
     def basicOp(self, argVals):
@@ -52,7 +52,6 @@ class Sentence(Expr):
 
 class NOT(Expr):
     opName = '~'
-    result = False
     def __init__(self, child=None): #not can have only one child
         self.children = [child]
     def basicOp(self, argVals):
@@ -241,7 +240,7 @@ class Parser:
 ################
 # main program 
 parser = Parser();
-string = '(Fire ==> Smoke) /\ Fire'
+string = '(true /\ true) /\ false'
 
 tokenList = parser.lex(string)
 
