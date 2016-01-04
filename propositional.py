@@ -104,6 +104,12 @@ class Parser:
     badPatterns = [' ', '/\\', '\\/'] #critical patterns to be replaced in clean step
     goodPatterns = ['', 'and', 'or'] #patterns used as replacement in clean step
     
+    groups = []
+    const = []
+    var = []
+    structure = []
+    previous = 'none'    
+    
     def __init__(self):
         pass
 
@@ -121,87 +127,70 @@ class Parser:
         string = self.clean(string)        
         return list(filter(None, re.split('(==>|<=>|and|or|~|[()])', string)))
     
+    
+    def addExprToStructure(self, expr, token):
+        if self.previous == 'var':
+            expr.addChild(self.var.pop())
+        elif self.previous in ['true', 'false']:
+            expr.addChild(self.const.pop())
+        elif self.previous == ')':
+            expr.addChild(self.groups.pop())
+        self.structure.append(expr)
+        self.previous = token
+    
+    def addConstToStructure(self, val, token):
+        if self.previous in operators:
+            self.structure[-1].addChild(Const(val))
+        self.const.append(Const(val))
+        self.previous = token
+    
     def parse(self, tokenList):
-        ast = AST()
-        ast.startNode = Sentence()
-        groups = []
-        const = []
-        var = []
-        structure = []
-        previous = 'none'
+        argumentGroup = False
         for token in tokenList:
             if token == '(':
-                pass
+                if self.previous in operators:
+                    argumentGroup = True
+                self.previous = token
             elif token == ')':
-                groups.append(structure)
-                structure = []
-                previous = token
+                self.groups.append(self.structure.pop())
+                if argumentGroup:
+                    self.structure[-1].addChild(self.groups.pop())
+                self.previous = token
             elif token == '~':
                 #nots are kind of critical...?
                 expr = NOT()
-                structure.append(expr)
-                previous = token
+                self.structure.append(expr)
+                self.previous = token
             elif token == 'and':
                 expr = AND()
-                if previous == 'var':
-                    expr.addChild(var.pop())
-                elif previous in ['true', 'false']:
-                    expr.addChild(const.pop())
-                elif previous == ')':
-                    expr.addChild(groups.pop())
-                structure.append(expr)
-                previous = token
+                self.addExprToStructure(expr, token)
             elif token == 'or':
                 expr = OR()
-                if previous == 'var':
-                    expr.addChild(var.pop())
-                elif previous in ['true', 'false']:
-                    expr.addChild(const.pop())
-                elif previous == ')':
-                    expr.addChild(groups.pop())
-                structure.append(expr)
-                previous = token
+                self.addExprToStructure(expr, token)
             elif token == '==>':
                 expr = IMPL()
-                if previous == 'var':
-                    expr.addChild(var.pop())
-                elif previous in ['true', 'false']:
-                    expr.addChild(const.pop())
-                elif previous == ')':
-                    expr.addChild(groups.pop())
-                structure.append(expr)
-                previous = token
+                self.addExprToStructure(expr, token)
             elif token == '<=>':
                 expr = BIDI()
-                if previous == 'var':
-                    expr.addChild(var.pop())
-                elif previous in ['true', 'false']:
-                    expr.addChild(const.pop())
-                elif previous == ')':
-                    expr.addChild(groups.pop())
-                structure.append(expr)
-                previous = token
+                self.addExprToStructure(expr, token)
             elif token == 'true':
-                if previous in operators:
-                    structure[-1].addChild(Const(True))
-                const.append(Const(True))
-                previous = token
+                self.addConstToStructure(True, token)
             elif token == 'false':
-                if previous in operators:
-                    structure[-1].addChild(Const(False))
-                const.append(Const(True))
-                previous = token
+                self.addConstToStructure(False, token)
             else :
                 #variable
-                if previous in operators:
-                    structure[-1].addChild(Var(token))
-                previous = 'var'
-                var.append(Var(token))
-        return structure
+                if self.previous in operators and self.previous != '(':
+                    self.structure[-1].addChild(Var(token))
+                self.previous = 'var'
+                self.var.append(Var(token))
+        if self.groups:
+           #if there is still a group left at the end
+            self.structure[-1].addChild(self.groups.pop())
+        return self.structure
         
 #def main():
 parser = Parser();
-string = 'true <=> false'
+string = '(a /\ b) ==> (c \/ ( d \/ (e /\ f)))'
 tokenList = parser.lex(string)
 print string
 print tokenList
