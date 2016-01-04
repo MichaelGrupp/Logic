@@ -51,6 +51,7 @@ class Sentence(Expr):
         self.children = [child]
 
 class NOT(Expr):
+    #a negation expression
     opName = '~'
     def __init__(self, child=None): #not can have only one child
         self.children = [child]
@@ -58,24 +59,29 @@ class NOT(Expr):
         return not argVals[0]
 
 class OR(Expr):
+    #an or expression
     opName = 'or'
     def basicOp(self, argVals):
         return argVals[0] or argVals[1]
 
 class AND(Expr):
+    #an and expression
     opName = 'and'
     def basicOp(self, argVals):
         return argVals[0] and argVals[1]   
     
 class IMPL(Expr):
+    #an implication expression
     opName = '==>'
     def basicOp(self, argVals):
-        return None # how to do this??
+        return (not argVals[0]) or argVals[1] #implication elimination
 
 class BIDI(Expr):
+    #a bidirectional expression
     opName = '<=>'
     def basicOp(self, argVals):
-        return None # how to do this??
+        #biconditional and implication elimination
+        return ((not argVals[0]) or argVals[1]) and ((not argVals[1]) or argVals[0])
 
 class AST:
     #Abstract Syntax Tree - representation of a sentence's syntax
@@ -171,7 +177,7 @@ class Parser:
             self.const.append(NOT(Const(val)))
             self.negs.pop()
         else:
-            self.const.append(Const(token))
+            self.const.append(Const(val))
         if self.previous in operators and self.previous != '~':
             self.structure[-1].addChild(self.const.pop())        
         self.previous = token
@@ -240,7 +246,7 @@ class Parser:
 ################
 # main program 
 parser = Parser();
-string = '(true /\ true) /\ false'
+string = '(true ==> false) \/ (true <=> true)'
 
 tokenList = parser.lex(string)
 
@@ -248,5 +254,5 @@ ast = parser.parse(tokenList)
 ast.traverse(ast.startNode)
 #print 'variable count: ' + str(ast.countVariables(ast.startNode, 0))
 result = ast.calcSentence()
-print result
+print 'result' + str(result)
 pass
