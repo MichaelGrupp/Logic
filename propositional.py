@@ -27,35 +27,59 @@ class Expr:
     #an expression has its arguments as children
     #children can be Const, Var or Expr    
     children = []
-    def __init__(self, child1=None, child2=None):
-        self.children = [child1, child2]
+    def __init__(self):
+        pass
     def addChild(self, child):
         self.children.append(child)
+    def basicOp(self, argVals):
+        #the basic operation, override this for every Expr type
+        return None
+    def calc(self):
+        #recursively calculate the expression
+        argVals = []
+        for child in self.children:
+            if isinstance(child, Expr):
+                argVals.append(child.calc())
+            elif isinstance(child, Var) or isinstance(child, Const):
+                argVals.append(child.value)
+        return self.basicOp(argVals)
 
 class Sentence(Expr):
     #start of an AST, only one child
     opName = 'Sentence'
-    def __init__(self, child=None):
+    def __init__(self, child):
         self.children = [child]
 
 class NOT(Expr):
     opName = '~'
+    result = False
     def __init__(self, child=None): #not can have only one child
         self.children = [child]
-    
+    def basicOp(self, argVals):
+        return not argVals[0]
+
 class OR(Expr):
     opName = 'or'
+    def basicOp(self, argVals):
+        return argVals[0] or argVals[1]
 
 class AND(Expr):
     opName = 'and'
-
+    def basicOp(self, argVals):
+        return argVals[0] and argVals[1]   
+    
 class IMPL(Expr):
     opName = '==>'
+    def basicOp(self, argVals):
+        return None # how to do this??
 
 class BIDI(Expr):
     opName = '<=>'
+    def basicOp(self, argVals):
+        return None # how to do this??
 
 class AST:
+    #Abstract Syntax Tree - representation of a sentence's syntax
     #the AST is a tree of Expr, Var and Const nodes
     startNode = None
     
@@ -80,7 +104,13 @@ class AST:
             elif isinstance(child, Var):
                 count += 1
         return count
-
+    def calcSentence(self):
+        #calculate the output of the sentence with current variable values
+        res = []
+        #for child in self.startNode.children:
+        res.append(self.startNode.children[0].calc())
+        return res
+        
 
 class PropLogic:
     def __init__(self):
@@ -91,7 +121,7 @@ class PropLogic:
         pass
     def unsatisfiable(formula):
         pass
-    def entails(formula):
+    def entails(formula1, formula2):
         pass
     
 #key tokens in propositional logic
@@ -138,9 +168,13 @@ class Parser:
         self.previous = token
     
     def addConstToStructure(self, val, token):
-        if self.previous in operators:
-            self.structure[-1].addChild(Const(val))
-        self.const.append(Const(val))
+        if self.previous == '~': 
+            self.const.append(NOT(Const(val)))
+            self.negs.pop()
+        else:
+            self.const.append(Const(token))
+        if self.previous in operators and self.previous != '~':
+            self.structure[-1].addChild(self.const.pop())        
         self.previous = token
     
     def parse(self, tokenList):
@@ -213,5 +247,7 @@ tokenList = parser.lex(string)
 
 ast = parser.parse(tokenList)
 ast.traverse(ast.startNode)
-print 'variable count: ' + str(ast.countVariables(ast.startNode, 0))
+#print 'variable count: ' + str(ast.countVariables(ast.startNode, 0))
+result = ast.calcSentence()
+print result
 pass
