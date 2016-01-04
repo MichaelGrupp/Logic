@@ -7,15 +7,6 @@ Created on Sun Jan 03 15:03:22 2016
 
 import re
 
-"""
-logical operators in Python:
-AND OR NOT
-True False
-"""
-
-#operators in propositional logic, descending order
-operators = ['<=>', '==>', 'or', 'and', '~']
-constants = ['true', 'false']
 
 #constant and variable nodes for AST
 class Const:
@@ -30,7 +21,7 @@ class Var:
         self.value = value
         self.name = name
 
-#expression nodes for AST
+#operator expression nodes for AST
 class Expr:
     opName = '' #operator name, for easier printing later
     #an expression has its arguments as children
@@ -42,8 +33,9 @@ class Expr:
         self.children.append(child)
 
 class Sentence(Expr):
+    #start of an AST, only one child
     opName = 'Sentence'
-    def __init__(self, child=None): #start of an AST, only one child
+    def __init__(self, child=None):
         self.children = [child]
 
 class NOT(Expr):
@@ -67,6 +59,9 @@ class AST:
     #the AST is a tree of Expr, Var and Const nodes
     startNode = None
     
+    def __init__(self, startNode):
+        self.startNode = startNode
+    
     def traverse(self, node):
         for child in node.children:
             if isinstance(child, Expr):
@@ -77,15 +72,15 @@ class AST:
                 print (child.name),# + '[' + str(child.value) +']'),
             elif isinstance(child, Const):
                 print str(child.value),
-class Formula:
-    bids = [] #'<=>' bidirectional expressions    
-    imps = [] #'==>' implication expressions
-    ors = [] #'or' expressions
-    ands = [] #'and' expressions
-    nots = [] #'~' not expressions
-    
-    def __init__(self):
-        pass
+
+    def countVariables(self, node, count):
+        for child in node.children:
+            if isinstance(child, Expr):
+                count = self.countVariables(child, count)
+            elif isinstance(child, Var):
+                count += 1
+        return count
+
 
 class PropLogic:
     def __init__(self):
@@ -99,17 +94,14 @@ class PropLogic:
     def entails(formula):
         pass
     
-    
+#key tokens in propositional logic
+operators = ['<=>', '==>', 'or', 'and', '~']
+constants = ['true', 'false']
+
 class Parser:
     badPatterns = [' ', '/\\', '\\/'] #critical patterns to be replaced in clean step
     goodPatterns = ['', 'and', 'or'] #patterns used as replacement in clean step
-    
-    groups = []
-    const = []
-    var = []
-    structure = []
-    previous = 'none'    
-    
+        
     def __init__(self):
         pass
 
@@ -127,11 +119,18 @@ class Parser:
         string = self.clean(string)        
         return list(filter(None, re.split('(==>|<=>|and|or|~|[()])', string)))
     
+    #temporal containers used during parsing
+    groups = [] #expressions in ( )
+    const = [] #constants
+    var = [] #variables
+    negs = [] #predicates (negation in propositional logic)
+    structure = [] #the currently parsed syntax structure (quite similar to AST)
+    previous = 'none' #previously parsed token    
     
     def addExprToStructure(self, expr, token):
         if self.previous == 'var':
             expr.addChild(self.var.pop())
-        elif self.previous in ['true', 'false']:
+        elif self.previous in constants:
             expr.addChild(self.const.pop())
         elif self.previous == ')':
             expr.addChild(self.groups.pop())
@@ -145,21 +144,29 @@ class Parser:
         self.previous = token
     
     def parse(self, tokenList):
-        argumentGroup = False
+        #parse a token list and generate an AST
+        argumentGroup = False  
         for token in tokenList:
             if token == '(':
-                if self.previous in operators:
+                if self.previous in operators and self.previous != '~':
                     argumentGroup = True
+                else:
+                    argumentGroup = False
                 self.previous = token
             elif token == ')':
-                self.groups.append(self.structure.pop())
+                if self.negs: #if negation predicate exists...
+                    self.negs.pop()
+                    self.groups.append(NOT(self.structure.pop()))
+                else:
+                    self.groups.append(self.structure.pop())
                 if argumentGroup:
                     self.structure[-1].addChild(self.groups.pop())
                 self.previous = token
             elif token == '~':
-                #nots are kind of critical...?
-                expr = NOT()
-                self.structure.append(expr)
+                #nots are the only operators that can be children of operators
+                #expr = NOT()
+                #self.structure.append(expr)
+                self.negs.append(NOT())
                 self.previous = token
             elif token == 'and':
                 expr = AND()
@@ -178,34 +185,33 @@ class Parser:
             elif token == 'false':
                 self.addConstToStructure(False, token)
             else :
-                #variable
-                if self.previous in operators and self.previous != '(':
-                    self.structure[-1].addChild(Var(token))
+                #variable      
+                if self.previous == '~': 
+                    self.var.append(NOT(Var(token)))
+                    self.negs.pop()
+                else:
+                    self.var.append(Var(token))
+                if self.previous in operators and self.previous != '~':
+                    self.structure[-1].addChild(self.var.pop()) 
                 self.previous = 'var'
-                self.var.append(Var(token))
-        if self.groups:
-           #if there is still a group left at the end
+        if self.groups and not self.structure:
+           #if sentence consists only of a group...
+            self.structure.append(self.groups.pop())
+        elif self.groups:
+            #if there is a group left that was not yet appended to structure...
             self.structure[-1].addChild(self.groups.pop())
-        return self.structure
-        
-#def main():
+        #return the AST object of this parsing session
+        return AST(Sentence(self.structure.pop()))
+
+
+################
+# main program 
 parser = Parser();
-string = '(a /\ b) ==> (c \/ ( d \/ (e /\ f)))'
+string = '(Fire ==> Smoke) /\ Fire'
+
 tokenList = parser.lex(string)
-print string
-print tokenList
 
-structure = parser.parse(tokenList)
-
-#expr1 = OR(Var('alpha'), Var('beta', True))
-#expr2 = AND(Var('gamma'), NOT(Var('omega')))
-#expr3 = IMPL(expr1, expr2)
-#expr = Sentence()
-#expr.addChild(expr3)
-
-sentence = Sentence(structure.pop())
-
-ast = AST()
-ast.startNode = sentence
+ast = parser.parse(tokenList)
 ast.traverse(ast.startNode)
+print 'variable count: ' + str(ast.countVariables(ast.startNode, 0))
 pass
