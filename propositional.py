@@ -14,7 +14,7 @@ True False
 """
 
 #operators in propositional logic, descending order
-operators = ['(', ')', '<=>', '==>', 'or', 'and', '~']
+operators = ['<=>', '==>', 'or', 'and', '~']
 constants = ['true', 'false']
 
 #constant and variable nodes for AST
@@ -36,19 +36,19 @@ class Expr:
     #an expression has its arguments as children
     #children can be Const, Var or Expr    
     children = []
-    def __init__(self, child1, child2):
+    def __init__(self, child1=None, child2=None):
         self.children = [child1, child2]
     def addChild(self, child):
-        self.children = child
+        self.children.append(child)
 
 class Sentence(Expr):
     opName = 'Sentence'
-    def __init__(self, child): #start of an AST, only one child
+    def __init__(self, child=None): #start of an AST, only one child
         self.children = [child]
 
 class NOT(Expr):
     opName = '~'
-    def __init__(self, child): #not can have only one child
+    def __init__(self, child=None): #not can have only one child
         self.children = [child]
     
 class OR(Expr):
@@ -76,7 +76,7 @@ class AST:
             elif isinstance(child, Var):
                 print (child.name),# + '[' + str(child.value) +']'),
             elif isinstance(child, Const):
-                print (child.value),
+                print str(child.value),
 class Formula:
     bids = [] #'<=>' bidirectional expressions    
     imps = [] #'==>' implication expressions
@@ -119,45 +119,104 @@ class Parser:
         #in a list of unordered tokens (operator, keys, symbols)
         #e.g. 'a /\ b' --> ['a', 'and', 'b']
         string = self.clean(string)        
-        return list(filter(None, re.split('(and|or|~|[()])', string)))
+        return list(filter(None, re.split('(==>|<=>|and|or|~|[()])', string)))
     
-    def parse(tokenList):
+    def parse(self, tokenList):
+        ast = AST()
+        ast.startNode = Sentence()
+        groups = []
+        const = []
+        var = []
+        structure = []
+        previous = 'none'
         for token in tokenList:
             if token == '(':
                 pass
             elif token == ')':
-                pass
+                groups.append(structure)
+                structure = []
+                previous = token
             elif token == '~':
-                pass
+                #nots are kind of critical...?
+                expr = NOT()
+                structure.append(expr)
+                previous = token
             elif token == 'and':
-                pass
+                expr = AND()
+                if previous == 'var':
+                    expr.addChild(var.pop())
+                elif previous in ['true', 'false']:
+                    expr.addChild(const.pop())
+                elif previous == ')':
+                    expr.addChild(groups.pop())
+                structure.append(expr)
+                previous = token
             elif token == 'or':
-                pass
+                expr = OR()
+                if previous == 'var':
+                    expr.addChild(var.pop())
+                elif previous in ['true', 'false']:
+                    expr.addChild(const.pop())
+                elif previous == ')':
+                    expr.addChild(groups.pop())
+                structure.append(expr)
+                previous = token
             elif token == '==>':
-                pass
+                expr = IMPL()
+                if previous == 'var':
+                    expr.addChild(var.pop())
+                elif previous in ['true', 'false']:
+                    expr.addChild(const.pop())
+                elif previous == ')':
+                    expr.addChild(groups.pop())
+                structure.append(expr)
+                previous = token
             elif token == '<=>':
-                pass
+                expr = BIDI()
+                if previous == 'var':
+                    expr.addChild(var.pop())
+                elif previous in ['true', 'false']:
+                    expr.addChild(const.pop())
+                elif previous == ')':
+                    expr.addChild(groups.pop())
+                structure.append(expr)
+                previous = token
             elif token == 'true':
-                pass
+                if previous in operators:
+                    structure[-1].addChild(Const(True))
+                const.append(Const(True))
+                previous = token
             elif token == 'false':
-                pass
+                if previous in operators:
+                    structure[-1].addChild(Const(False))
+                const.append(Const(True))
+                previous = token
             else :
                 #variable
-                pass
-
+                if previous in operators:
+                    structure[-1].addChild(Var(token))
+                previous = 'var'
+                var.append(Var(token))
+        return structure
+        
 #def main():
 parser = Parser();
-string = '(alpha) ==> ~gamma'
-symbolList = parser.lex(string)
+string = 'true <=> false'
+tokenList = parser.lex(string)
 print string
-print symbolList
+print tokenList
 
-expr1 = OR(Var('alpha'), Var('beta', True))
-expr2 = AND(Var('gamma'), NOT(Var('omega')))
-expr3 = IMPL(expr1, expr2)
-expr = Sentence(expr3)
+structure = parser.parse(tokenList)
+
+#expr1 = OR(Var('alpha'), Var('beta', True))
+#expr2 = AND(Var('gamma'), NOT(Var('omega')))
+#expr3 = IMPL(expr1, expr2)
+#expr = Sentence()
+#expr.addChild(expr3)
+
+sentence = Sentence(structure.pop())
 
 ast = AST()
-ast.startNode = expr
+ast.startNode = sentence
 ast.traverse(ast.startNode)
 pass
