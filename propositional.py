@@ -6,7 +6,7 @@ Created on Sun Jan 03 15:03:22 2016
 """
 
 import re
-
+import itertools as it
 
 #constant and variable nodes for AST
 class Const:
@@ -21,9 +21,11 @@ class Var:
         self.value = value
         self.name = name
 
-#operator expression nodes for AST
+#expression types for AST
 class Expr:
-    opName = '' #operator name, for easier printing later
+    #this class only defines the basic expression interface
+    #all real expression types inherit/override it
+    opName = '' #operator name
     #an expression has its arguments as children
     #children can be Const, Var or Expr    
     children = []
@@ -35,7 +37,7 @@ class Expr:
         #the basic operation, override this for every Expr type
         return None
     def calc(self):
-        #recursively calculate the expression
+        #recursively calculate the expression and its children
         argVals = []
         for child in self.children:
             if isinstance(child, Expr):
@@ -87,15 +89,17 @@ class AST:
     #Abstract Syntax Tree - representation of a sentence's syntax
     #the AST is a tree of Expr, Var and Const nodes
     startNode = None
+    varValueDict = dict() #dictionary: 'Var.name' --> Var.value
     
     def __init__(self, startNode):
         self.startNode = startNode
     
-    def traverse(self, node):
+    def toString(self, node):
+        #traverse AST recursively and print it
         for child in node.children:
             if isinstance(child, Expr):
                 print (child.opName + '('), #comma supresses newline
-                self.traverse(child)
+                self.toString(child)
                 print (')'),
             elif isinstance(child, Var):
                 print (child.name),# + '[' + str(child.value) +']'),
@@ -103,30 +107,59 @@ class AST:
                 print str(child.value),
 
     def countVariables(self, node, count):
+        #traverse AST recursively and count unique variables
+        #initializes the varValueDict
+        #(in and(a a), a is only counted once)
         for child in node.children:
             if isinstance(child, Expr):
                 count = self.countVariables(child, count)
             elif isinstance(child, Var):
-                count += 1
+                if child.name not in self.varValueDict:                    
+                    self.varValueDict[child.name] = child.value
+                    count += 1
         return count
+        
     def calcSentence(self):
         #calculate the output of the sentence with current variable values
         res = []
         #for child in self.startNode.children:
         res.append(self.startNode.children[0].calc())
         return res
+    
+    def assignCurrentValues(self, node):
+        #assign current values from dictionary varValueDict to variables in AST
+        for child in node.children:
+            if isinstance(child, Expr):
+                self.assignCurrentValues(child)
+            elif isinstance(child, Var):
+                child.value = self.varValueDict[child.name]
+    
+    def evaluateAllModels(self, node, res):
+        #test all possible models - return list of all results
+        varCount = len(self.varValueDict)
+        allModels = it.product([True,False],repeat=varCount) #cartesian product
+        for model in allModels: 
+            for key, i in zip(self.varValueDict, range(varCount)):
+                #import the values from allModels to varValueDict
+                self.varValueDict[key] = model[i]
+            self.assignCurrentValues(self.startNode)
+            res.append(self.calcSentence())
+        return res
         
-
 class PropLogic:
     def __init__(self):
         pass    
     def valid(formula):
+        #true in all models
         pass
     def satisfiable(formula):
+        #true in one or more models
         pass
     def unsatisfiable(formula):
+        #false in all models
         pass
     def entails(formula1, formula2):
+        #theorem 3.1 from sheet: a entails b if and(a not(b)) is unsatisfiable
         pass
     
 #key tokens in propositional logic
@@ -245,14 +278,17 @@ class Parser:
 
 ################
 # main program 
+# usage: avoid brackets, double negations
 parser = Parser();
-string = '(true ==> false) \/ (true <=> true)'
+string = 'a \/ b'
 
 tokenList = parser.lex(string)
 
 ast = parser.parse(tokenList)
-ast.traverse(ast.startNode)
-#print 'variable count: ' + str(ast.countVariables(ast.startNode, 0))
-result = ast.calcSentence()
-print 'result' + str(result)
+ast.toString(ast.startNode)
+print 'variable count: ' + str(ast.countVariables(ast.startNode, 0))
+
+res = []
+ast.evaluateAllModels(ast.startNode, res)
+print res
 pass
