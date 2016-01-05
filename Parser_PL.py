@@ -17,10 +17,26 @@ constants = ['true', 'false']
 class Parser:
     badPatterns = [' ', '/\\', '\\/'] #critical patterns to be replaced in clean step
     goodPatterns = ['', 'and', 'or'] #patterns used as replacement in clean step
-        
+    
+    #temporal containers used during parsing
+    groups = [] #expressions in ( )
+    const = [] #constants
+    var = [] #variables
+    negs = [] #predicates (negation in propositional logic)
+    structure = [] #the currently parsed syntax structure (quite similar to AST)
+    previous = 'none' #previously parsed token    
+    
     def __init__(self):
         pass
-
+    
+    def reset(self):
+        self.groups = []
+        self.const = []
+        self.var = [] #variables
+        self.negs = []
+        self.structure = []
+        self.previous = 'none' #previously parsed token    
+    
     def clean(self, string):
         #patterns containing backslashes are critical in python (escape symbol)
         #replace such patterns defined in badPatterns by those in goodPatterns
@@ -34,14 +50,6 @@ class Parser:
         #e.g. 'a /\ b' --> ['a', 'and', 'b']
         string = self.clean(string)        
         return list(filter(None, re.split('(==>|<=>|and|or|~|[()])', string)))
-    
-    #temporal containers used during parsing
-    groups = [] #expressions in ( )
-    const = [] #constants
-    var = [] #variables
-    negs = [] #predicates (negation in propositional logic)
-    structure = [] #the currently parsed syntax structure (quite similar to AST)
-    previous = 'none' #previously parsed token    
     
     def addExprToStructure(self, expr, token):
         if self.previous == 'var':
@@ -65,6 +73,7 @@ class Parser:
     
     def parse(self, tokenList):
         #parse a token list and generate an AST
+        self.reset()
         argumentGroup = False  
         for token in tokenList:
             if token == '(':
@@ -84,8 +93,6 @@ class Parser:
                 self.previous = token
             elif token == '~':
                 #nots are the only operators that can be children of operators
-                #expr = NOT()
-                #self.structure.append(expr)
                 self.negs.append(ap.NOT())
                 self.previous = token
             elif token == 'and':

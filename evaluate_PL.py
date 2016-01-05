@@ -12,7 +12,7 @@ Usage: specify sentence in ASCII syntax:
 constants: true false
 variables: any other arbitrary string
 
-example: (alpha /\ beta) ==> (c \/ true)
+example: (~alpha /\ beta) ==> (c \/ true)
 
 Created on Sun Jan 03 15:03:22 2016
 
@@ -22,15 +22,14 @@ Created on Sun Jan 03 15:03:22 2016
 import Parser_PL as pp
 import AST_PL as ap
 
-string = '(alpha /\ beta) ==> (c \/ true)'
+sentence = '(~alpha /\ beta) ==> (false \/ false)'
 
 parser = pp.Parser();
-tokenList = parser.lex(string)
+tokenList = parser.lex(sentence)
 ast = parser.parse(tokenList)
 
-print ast.toString(ast.startNode)
+ast.printSentence(ast.startNode)
 
-print ast.valid()
-print ast.unsatisfiable()
-print ast.satisfiable()
-pass
+print '\nis valid: ' + str(ast.valid())
+print 'is satisfiable: ' + str(ast.satisfiable())
+print 'is unsatisfiable: ' + str(ast.unsatisfiable())

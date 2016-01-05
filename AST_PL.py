@@ -86,6 +86,7 @@ class BIDI(Expr):
         #biconditional and implication elimination
         return ((not argVals[0]) or argVals[1]) and ((not argVals[1]) or argVals[0])
 
+
 class AST:
     #Abstract Syntax Tree - representation of a sentence's syntax
     #the AST is a tree of Expr, Var and Const nodes
@@ -95,12 +96,12 @@ class AST:
     def __init__(self, startNode):
         self.startNode = startNode
     
-    def toString(self, node):
+    def printSentence(self, node):
         #traverse AST recursively and print it
         for child in node.children:
             if isinstance(child, Expr):
                 print (child.opName + '('), #comma supresses newline
-                self.toString(child)
+                self.printSentence(child)
                 print (')'),
             elif isinstance(child, Var):
                 print (child.name),# + '[' + str(child.value) +']'),
@@ -151,6 +152,7 @@ class AST:
             return False
         else:
             return True
+            
     def satisfiable(self):
         #true in one or more models
         results = self.evaluateAllModels(self.startNode)
@@ -158,6 +160,7 @@ class AST:
             return True
         else:
             return False
+            
     def unsatisfiable(self):
         #false in all models
         results = self.evaluateAllModels(self.startNode)
@@ -165,7 +168,10 @@ class AST:
             return True
         else:
             return False
+            
     def entails(self, otherAST):
         #theorem 3.1 from sheet: a entails b if and(a not(b)) is unsatisfiable
-        
-        pass    
+        a = AND(self.startNode.children[0], NOT(otherAST.startNode.children[0]))
+        s = Sentence(a)  #conjunction and(a not(b))
+        entailed = AST(s) #temporal AST
+        return entailed.unsatisfiable() 
