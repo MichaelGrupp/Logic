@@ -106,24 +106,18 @@ class AST:
             elif isinstance(child, Const):
                 print str(child.value),
 
-    def countVariables(self, node, count):
-        #traverse AST recursively and count unique variables
-        #initializes the varValueDict
-        #(in and(a a), a is only counted once)
+    def initDict(self, node):
+        #traverse AST recursively and initialize the varValueDict
         for child in node.children:
             if isinstance(child, Expr):
-                count = self.countVariables(child, count)
+                self.initDict(child)
             elif isinstance(child, Var):
                 if child.name not in self.varValueDict:                    
                     self.varValueDict[child.name] = child.value
-                    count += 1
-        return count
         
     def calcSentence(self):
         #calculate the output of the sentence with current variable values
-        res = []
-        #for child in self.startNode.children:
-        res.append(self.startNode.children[0].calc())
+        res = (self.startNode.children[0].calc())
         return res
     
     def assignCurrentValues(self, node):
@@ -134,8 +128,10 @@ class AST:
             elif isinstance(child, Var):
                 child.value = self.varValueDict[child.name]
     
-    def evaluateAllModels(self, node, res):
+    def evaluateAllModels(self, node):
         #test all possible models - return list of all results
+        self.initDict(self.startNode)
+        res = []
         varCount = len(self.varValueDict)
         allModels = it.product([True,False],repeat=varCount) #cartesian product
         for model in allModels: 
@@ -145,23 +141,35 @@ class AST:
             self.assignCurrentValues(self.startNode)
             res.append(self.calcSentence())
         return res
-        
-class PropLogic:
-    def __init__(self):
-        pass    
-    def valid(formula):
-        #true in all models
-        pass
-    def satisfiable(formula):
-        #true in one or more models
-        pass
-    def unsatisfiable(formula):
-        #false in all models
-        pass
-    def entails(formula1, formula2):
-        #theorem 3.1 from sheet: a entails b if and(a not(b)) is unsatisfiable
-        pass
     
+    #the actual theorem checks
+    def valid(self):
+        #true in all models
+        results = self.evaluateAllModels(self.startNode)
+        if False in results:
+            return False
+        else:
+            return True
+    def satisfiable(self):
+        #true in one or more models
+        results = self.evaluateAllModels(self.startNode)
+        if True in results:
+            return True
+        else:
+            return False
+    def unsatisfiable(self):
+        #false in all models
+        results = self.evaluateAllModels(self.startNode)
+        if True not in results:
+            return True
+        else:
+            return False
+    def entails(self, otherAST):
+        #theorem 3.1 from sheet: a entails b if and(a not(b)) is unsatisfiable
+        
+        pass    
+    
+
 #key tokens in propositional logic
 operators = ['<=>', '==>', 'or', 'and', '~']
 constants = ['true', 'false']
@@ -280,15 +288,12 @@ class Parser:
 # main program 
 # usage: avoid brackets, double negations
 parser = Parser();
-string = 'a \/ b'
+string = '(a \/ false) \/ true'
 
 tokenList = parser.lex(string)
-
 ast = parser.parse(tokenList)
-ast.toString(ast.startNode)
-print 'variable count: ' + str(ast.countVariables(ast.startNode, 0))
 
-res = []
-ast.evaluateAllModels(ast.startNode, res)
-print res
+print ast.valid()
+print ast.unsatisfiable()
+print ast.satisfiable()
 pass
