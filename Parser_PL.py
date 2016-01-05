@@ -127,6 +127,12 @@ class Parser:
         elif self.groups:
             #if there is a group left that was not yet appended to structure...
             self.structure[-1].addChild(self.groups.pop())
+        elif self.const:
+            #if sentence contains only a constant
+            self.structure.append(self.const.pop())
+        elif self.var:
+            #if sentence contains only a variable
+            self.structure.append(self.var.pop())
         #return the AST object of this parsing session
         return ap.AST(ap.Sentence(self.structure.pop()))
 

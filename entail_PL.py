@@ -22,8 +22,8 @@ Created on Tue Jan 05 19:57:53 2016
 import Parser_PL as pp
 import AST_PL as ap
 
-sentence_a = 'true /\ true'
-sentence_b = 'true /\ true'
+sentence_a = 'true'
+sentence_b = 'false'
 
 parser = pp.Parser();
 tokenList_a = parser.lex(sentence_a)
