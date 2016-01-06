@@ -22,7 +22,7 @@ Created on Sun Jan 03 15:03:22 2016
 import Parser_PL as pp
 import AST_PL as ap
 
-sentence = '(~alpha /\ beta) ==> (false \/ false)'
+sentence = '(Smoke ==> Fire) ==> (~Smoke /\ ~Fire)'
 
 parser = pp.Parser();
 tokenList = parser.lex(sentence)

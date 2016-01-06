@@ -94,7 +94,10 @@ class Parser:
             elif token == '~':
                 #nots are the only operators that can be children of operators
                 self.negs.append(ap.NOT())
-                self.previous = token
+                if self.previous == '(': 
+                    self.previous = '(~' #TODO: hack to avoid 'a /\ (~b /\ ~c) ' crash... better solution?
+                else:
+                    self.previous = token
             elif token == 'and':
                 expr = ap.AND()
                 self.addExprToStructure(expr, token)
@@ -113,12 +116,12 @@ class Parser:
                 self.addConstToStructure(False, token)
             else :
                 #variable      
-                if self.previous == '~': 
+                if self.previous == '~' or self.previous == '(~': 
                     self.var.append(ap.NOT(ap.Var(token)))
                     self.negs.pop()
                 else:
                     self.var.append(ap.Var(token))
-                if self.previous in operators and self.previous != '~':
+                if self.previous in operators and not (self.previous == '(~'): #TODO: hack to avoid 'a /\ (~b /\ ~c) ' crash... better solution?
                     self.structure[-1].addChild(self.var.pop()) 
                 self.previous = 'var'
         if self.groups and not self.structure:
@@ -135,4 +138,3 @@ class Parser:
             self.structure.append(self.var.pop())
         #return the AST object of this parsing session
         return ap.AST(ap.Sentence(self.structure.pop()))
-
