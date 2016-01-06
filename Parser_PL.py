@@ -32,10 +32,10 @@ class Parser:
     def reset(self):
         self.groups = []
         self.const = []
-        self.var = [] #variables
+        self.var = []
         self.negs = []
         self.structure = []
-        self.previous = 'none' #previously parsed token    
+        self.previous = 'none'    
     
     def clean(self, string):
         #patterns containing backslashes are critical in python (escape symbol)
@@ -71,7 +71,7 @@ class Parser:
             self.negs.pop()
         else:
             self.const.append(ap.Const(val))
-        if self.previous in operators and self.previous not in ['(~', '~']: #TODO: hack to avoid '~a /\ (~b /\ ~c) ' crash... better solution?
+        if self.previous in operators and self.previous not in ['(~'] and self.structure: #TODO: hack to avoid '~a /\ (~b /\ ~c) ' crash... better solution?
             self.structure[-1].addChild(self.const.pop()) 
         self.previous = token
     
@@ -79,7 +79,6 @@ class Parser:
         #parse a token list and generate an AST
         self.reset()
         argumentGroup = False
-        first = True
         for token in tokenList:
             if token == '(':
                 if self.previous in operators and self.previous != '~':
@@ -126,7 +125,7 @@ class Parser:
                     self.negs.pop()
                 else:
                     self.var.append(ap.Var(token))
-                if self.previous in operators and self.previous not in ['(~', '~']: #TODO: hack to avoid '~a /\ (~b /\ ~c) ' crash... better solution?
+                if self.previous in operators and self.previous not in ['(~'] and self.structure: #TODO: hack to avoid '~a /\ (~b /\ ~c) ' crash... better solution?
                     self.structure[-1].addChild(self.var.pop()) 
                 self.previous = 'var'
         if self.groups and not self.structure:
