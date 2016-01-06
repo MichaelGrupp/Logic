@@ -52,12 +52,15 @@ class Parser:
         return list(filter(None, re.split('(==>|<=>|and|or|~|[()])', string)))
     
     def addExprToStructure(self, expr, token):
-        if self.previous == 'var':
+        if self.previous == 'var' and self.var:
+            #var stack is empty at 2nd operator in chained expression: a /\ b \/ c
             expr.addChild(self.var.pop())
         elif self.previous in constants:
             expr.addChild(self.const.pop())
         elif self.previous == ')':
             expr.addChild(self.groups.pop())
+        else:
+            expr.addChild(self.structure.pop()) #chained expression: a /\ b \/ c
         self.structure.append(expr)
         self.previous = token
     
