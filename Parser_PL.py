@@ -55,9 +55,10 @@ class Parser:
         if self.previous == 'var' and self.var:
             #var stack is empty at 2nd operator in chained expression: a /\ b \/ c
             expr.addChild(self.var.pop())
-        elif self.previous in constants:
+        elif self.previous in constants and self.const:
             expr.addChild(self.const.pop())
-        elif self.previous == ')':
+        elif self.previous == ')' and self.groups:
+            #group stack is empty at 3rd operator in chain: A \/ (B /\ C) /\ D
             expr.addChild(self.groups.pop())
         else:
             expr.addChild(self.structure.pop()) #chained expression: a /\ b \/ c
@@ -65,19 +66,20 @@ class Parser:
         self.previous = token
     
     def addConstToStructure(self, val, token):
-        if self.previous == '~': 
+        if self.previous == '~' or self.previous == '(~': 
             self.const.append(ap.NOT(ap.Const(val)))
             self.negs.pop()
         else:
             self.const.append(ap.Const(val))
-        if self.previous in operators and self.previous != '~':
-            self.structure[-1].addChild(self.const.pop())        
+        if self.previous in operators and self.previous not in ['(~', '~']: #TODO: hack to avoid '~a /\ (~b /\ ~c) ' crash... better solution?
+            self.structure[-1].addChild(self.const.pop()) 
         self.previous = token
     
     def parse(self, tokenList):
         #parse a token list and generate an AST
         self.reset()
-        argumentGroup = False  
+        argumentGroup = False
+        first = True
         for token in tokenList:
             if token == '(':
                 if self.previous in operators and self.previous != '~':
@@ -124,7 +126,7 @@ class Parser:
                     self.negs.pop()
                 else:
                     self.var.append(ap.Var(token))
-                if self.previous in operators and not (self.previous == '(~'): #TODO: hack to avoid 'a /\ (~b /\ ~c) ' crash... better solution?
+                if self.previous in operators and self.previous not in ['(~', '~']: #TODO: hack to avoid '~a /\ (~b /\ ~c) ' crash... better solution?
                     self.structure[-1].addChild(self.var.pop()) 
                 self.previous = 'var'
         if self.groups and not self.structure:
