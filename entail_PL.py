@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Check if a propositional logic sentence entails another sentence
+Specify the two sentences below and run this file to see the result in the output.
 
 Usage: specify sentence in ASCII syntax:
 /\  : conjunction
@@ -22,7 +23,7 @@ Created on Tue Jan 05 19:57:53 2016
 import Parser_PL as pp
 import AST_PL as ap
 
-sentence_a = 'A <=> B'
+sentence_a = 'A <=> B' #entails...
 sentence_b = '~A \/ B'
 
 parser = pp.Parser();

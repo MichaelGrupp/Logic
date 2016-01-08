@@ -1,2 +1,5 @@
 #ignore .pyc files (files generated during interpreting)
 *.pyc
+knights_knaves.py
+test_Parser.py
+test.py
