@@ -3,3 +3,17 @@
 knights_knaves.py
 test_Parser.py
 test.py
+
+#no temp files
+*~
+.~*
+**/*~
+**/.~*
+
+#no build folder
+build/
+
+#no Pycharm / CLion project files
+.idea/**
+**/.idea/
+
